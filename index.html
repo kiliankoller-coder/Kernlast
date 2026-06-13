@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Kernlast</title>
+<meta name="theme-color" content="#0E141B" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Kernlast" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+<style>
+:root{
+  --ink:#0E141B; --ink2:#121A23; --surface:#16202B; --surface2:#1B2733;
+  --line:#283643; --line-soft:#202C38; --bone:#EAF1F7; --ash:#8DA0B2; --ash-dim:#5E7384;
+  --blue:#4C8DFF; --amber:#FFB020; --green:#2FBF71; --red:#FF6B61;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{background:#070B0F;font-family:var(--sans);color:var(--bone);-webkit-font-smoothing:antialiased;}
+#app{height:100%;}
+.kl-shell{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;
+  background:var(--ink);border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
+.kl-main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.ash{color:var(--ash);}
+
+.kl-header{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 13px;border-bottom:1px solid var(--line-soft);position:sticky;top:0;background:var(--ink);z-index:5;}
+.kl-brand{font-weight:800;font-size:16px;letter-spacing:.22em;}
+.kl-date{color:var(--ash);font-size:12px;margin-top:3px;display:flex;align-items:center;gap:7px;}
+.kl-backtoday{background:var(--surface);border:1px solid var(--line);color:var(--blue);
+  font-size:10.5px;border-radius:999px;padding:2px 8px;cursor:pointer;font-family:var(--sans);}
+.kl-streak{display:flex;align-items:center;gap:6px;background:var(--surface);
+  border:1px solid var(--line);padding:6px 11px;border-radius:999px;font-size:14px;}
+
+.kl-page{padding:15px 15px 26px;}
+.kl-pad{padding:0 4px;}
+.kl-card{background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:16px;margin-bottom:13px;}
+.kl-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ash-dim);}
+.kl-h1{font-size:25px;font-weight:800;margin-top:3px;}
+.kl-h2{font-size:15px;font-weight:700;}
+.kl-sub-note{font-size:12px;line-height:1.45;margin:6px 4px 12px;color:var(--ash);}
+.kl-body{color:#C3D0DC;font-size:13px;line-height:1.55;margin:0 0 10px;}
+
+/* readiness */
+.kl-readi{display:flex;align-items:center;gap:6px;padding:12px 16px;}
+.kl-gnum{font-family:var(--mono);font-size:36px;font-weight:700;}
+.kl-gcap{font-size:8.5px;letter-spacing:.2em;font-family:var(--mono);}
+.kl-readi-body{flex:1;}
+.kl-readi-label{font-size:17px;font-weight:800;}
+.kl-readi-sub{color:var(--ash);font-size:12px;line-height:1.4;margin-top:4px;}
+
+/* session */
+.kl-session-head{display:flex;align-items:flex-start;justify-content:space-between;}
+.kl-meta-num{display:flex;flex-direction:column;align-items:flex-end;}
+.kl-meta-num .mono{font-size:19px;font-weight:700;}
+.kl-adj{font-size:11px;font-weight:600;margin-top:5px;}
+.kl-ex{border-top:1px solid var(--line-soft);padding:14px 0;}
+.kl-ex:first-of-type{border-top:none;}
+.kl-ex-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.kl-ex-name{font-size:14.5px;font-weight:600;}
+.kl-ex-last{font-size:11px;color:var(--ash-dim);margin-top:3px;}
+.kl-ex-cnt{font-size:13px;color:var(--ash);white-space:nowrap;}
+.kl-sets{display:flex;flex-direction:column;gap:7px;}
+.kl-set-hdr,.kl-setrow{display:grid;grid-template-columns:30px 1fr 1fr 46px;gap:8px;align-items:center;}
+.kl-set-hdr{font-size:10px;color:var(--ash-dim);text-transform:uppercase;letter-spacing:.08em;padding:0 2px;}
+.kl-set-i{font-family:var(--mono);color:var(--ash);font-size:13px;text-align:center;}
+.kl-num{background:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:10px 8px;
+  color:var(--bone);font-size:15px;font-family:var(--mono);text-align:center;width:100%;}
+.kl-num:focus{outline:none;border-color:var(--blue);}
+.kl-num::placeholder{color:var(--ash-dim);}
+.kl-set-done{height:38px;border-radius:9px;border:1.5px solid var(--line);background:transparent;
+  color:#0E141B;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;}
+.kl-set-done.on{background:var(--green);border-color:var(--green);}
+.kl-set-actions{display:flex;gap:8px;margin-top:10px;}
+.kl-mini{background:var(--ink2);border:1px solid var(--line);color:var(--ash);border-radius:8px;
+  padding:7px 12px;font-size:12px;cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;}
+
+/* generic */
+.kl-rest{display:flex;align-items:center;gap:13px;}
+.kl-banner{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:12px 13px;font-size:12.5px;line-height:1.45;}
+.kl-banner svg{flex-shrink:0;margin-top:1px;}
+.kl-banner-red{background:rgba(255,107,97,.10);border:1px solid rgba(255,107,97,.30);color:#FFB3AD;}
+.kl-banner-amber{background:rgba(255,176,32,.10);border:1px solid rgba(255,176,32,.32);color:#FFD27A;}
+
+/* goals */
+.kl-goals-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.kl-goal{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:14px;}
+.kl-goal:last-child{border-bottom:none;}
+.kl-goal>span:not(.mono){flex:1;}
+.kl-goal-done{color:var(--ash-dim);text-decoration:line-through;}
+.kl-check{width:24px;height:24px;border-radius:8px;border:1.6px solid var(--line);background:transparent;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:#0E141B;flex-shrink:0;transition:.15s;}
+.kl-check.on{background:var(--green);border-color:var(--green);}
+.kl-del{background:none;border:none;color:var(--ash-dim);cursor:pointer;padding:4px;display:flex;}
+.kl-add{display:flex;gap:8px;margin-top:12px;}
+.kl-add input{flex:1;background:var(--ink2);border:1px solid var(--line);border-radius:10px;
+  padding:11px 12px;color:var(--bone);font-size:13px;font-family:var(--sans);}
+.kl-add input:focus{outline:none;border-color:var(--blue);}
+.kl-add button{background:var(--blue);border:none;border-radius:10px;width:42px;display:flex;
+  align-items:center;justify-content:center;color:#fff;cursor:pointer;}
+
+/* buttons */
+.kl-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:11px;padding:11px 15px;
+  font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:var(--sans);}
+.kl-btn-blue{background:var(--blue);color:#fff;}
+.kl-btn-ghost{background:transparent;border-color:var(--line);color:var(--bone);}
+.kl-btn-red{background:var(--red);color:#2a0a08;}
+.kl-full{width:100%;}
+.kl-row{display:flex;gap:9px;}
+
+/* fields */
+.kl-field{margin-bottom:15px;}
+.kl-field:last-child{margin-bottom:0;}
+.kl-flabel{font-size:12px;font-weight:600;color:var(--ash);margin-bottom:8px;display:flex;justify-content:space-between;}
+.kl-flabel .mono{color:var(--bone);font-size:14px;}
+.kl-input,.kl-select{width:100%;background:var(--ink2);border:1px solid var(--line);border-radius:10px;
+  padding:12px 13px;color:var(--bone);font-size:15px;font-family:var(--sans);}
+.kl-input.mono{font-family:var(--mono);}
+.kl-input:focus,.kl-select:focus{outline:none;border-color:var(--blue);}
+.kl-range{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--line);outline:none;}
+.kl-range::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--blue);cursor:pointer;border:3px solid var(--ink);}
+.kl-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);cursor:pointer;border:3px solid var(--ink);}
+.kl-feel{display:flex;gap:8px;}
+.kl-feel-btn{flex:1;background:var(--ink2);border:1px solid var(--line);color:var(--ash);border-radius:11px;
+  padding:13px 0;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:.15s;}
+.kl-feel-btn.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.kl-cap-row{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ash-dim);margin-top:6px;padding:0 2px;}
+.kl-grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+
+/* targets bars */
+.kl-target{margin-bottom:13px;}
+.kl-target:last-child{margin-bottom:0;}
+.kl-tlabel{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px;}
+.kl-tlabel .mono{color:var(--ash);}
+.kl-bar{height:8px;background:var(--ink2);border-radius:99px;overflow:hidden;}
+.kl-bar>div{height:100%;border-radius:99px;transition:width .35s ease;}
+
+/* readiness result */
+.kl-result{display:flex;align-items:center;justify-content:space-between;margin-top:4px;
+  border:1px solid;border-radius:12px;padding:11px 14px;background:var(--ink2);}
+
+/* split */
+.kl-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.kl-split-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:15px 13px;text-align:left;cursor:pointer;color:var(--bone);}
+.kl-split-card.on{border-color:var(--blue);background:rgba(76,141,255,.07);}
+.kl-split-label{font-size:14px;font-weight:700;}
+.kl-split-sub{font-size:11.5px;color:var(--ash);margin-top:3px;}
+.kl-split-act{position:absolute;top:10px;right:10px;width:19px;height:19px;border-radius:6px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;}
+.kl-tabs2{display:flex;gap:7px;flex-wrap:wrap;margin:9px 4px 13px;}
+.kl-tab2{background:var(--ink2);border:1px solid var(--line);color:var(--ash);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);}
+.kl-tab2.on{background:var(--surface2);color:var(--bone);border-color:var(--ash-dim);}
+.kl-cfg-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line-soft);}
+.kl-cfg-row:last-child{border-bottom:none;}
+.kl-cfg-name{flex:1;font-size:14px;font-weight:600;}
+.kl-stepper{display:flex;align-items:center;gap:10px;background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:5px 7px;}
+.kl-stepper button{background:none;border:none;color:var(--bone);cursor:pointer;display:flex;padding:3px;}
+.kl-stepper .mono{font-size:15px;font-weight:700;min-width:14px;text-align:center;}
+.kl-chip{background:var(--ink2);border:1px solid var(--line);color:var(--bone);border-radius:999px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;}
+.kl-chip.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.kl-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.kl-add-label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ash-dim);margin:16px 4px 9px;}
+
+/* day type picker */
+.kl-week{display:flex;flex-direction:column;gap:8px;}
+.kl-daycard{background:var(--surface);border:1px solid var(--line);border-radius:13px;overflow:hidden;}
+.kl-daycard.today{border-color:var(--blue);}
+.kl-daymain{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:13px 14px;cursor:pointer;color:var(--bone);}
+.kl-dayleft{display:flex;align-items:center;gap:12px;}
+.kl-daydot{width:9px;height:9px;border-radius:3px;background:var(--blue);}
+.kl-daydot.rest{background:var(--ash-dim);}
+.kl-dayname{font-size:14px;font-weight:600;text-align:left;}
+.kl-daytype{font-size:11.5px;color:var(--ash);text-align:left;margin-top:2px;}
+.kl-dayopts{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 13px;}
+
+/* calendar */
+.kl-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.kl-cal-nav{background:var(--ink2);border:1px solid var(--line);color:var(--bone);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.kl-cal-title{font-size:15px;font-weight:700;}
+.kl-cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px;}
+.kl-cal-dow span{text-align:center;font-size:10.5px;color:var(--ash-dim);font-weight:600;}
+.kl-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.kl-cell{aspect-ratio:1;border-radius:10px;background:var(--ink2);border:1px solid transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;padding:2px;}
+.kl-cell.empty{background:transparent;cursor:default;}
+.kl-cell.today{border-color:var(--blue);}
+.kl-cell.sel{background:var(--surface2);}
+.kl-cell.done{box-shadow:inset 0 0 0 1.5px var(--green);}
+.kl-cell-n{font-family:var(--mono);font-size:13px;}
+.kl-cell-t{font-size:9px;font-weight:700;margin-top:1px;letter-spacing:.04em;}
+.kl-cal-detail{margin-top:16px;border-top:1px solid var(--line-soft);padding-top:14px;}
+
+/* spark */
+.kl-spark-wrap{margin-top:6px;}
+.kl-spark{width:100%;height:64px;display:block;}
+.kl-spark-empty{font-size:12px;color:var(--ash);padding:14px 0;}
+
+/* profile */
+.kl-bmi{display:flex;align-items:baseline;gap:8px;margin-top:4px;}
+.kl-bmi .mono{font-size:22px;font-weight:700;}
+.kl-foot{font-size:11px;color:var(--ash-dim);margin-top:11px;text-align:center;}
+.kl-steps-label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ash-dim);margin:6px 0 9px;}
+.kl-steps{margin:0;padding-left:19px;color:#C3D0DC;font-size:12.5px;line-height:1.55;}
+.kl-steps li{margin-bottom:6px;}
+.kl-polar-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.kl-polar-icon{width:34px;height:34px;border-radius:10px;background:rgba(76,141,255,.12);display:flex;align-items:center;justify-content:center;}
+
+/* nav */
+.kl-nav{display:flex;background:var(--ink2);border-top:1px solid var(--line);
+  padding:7px 4px calc(7px + env(safe-area-inset-bottom,0px));flex-shrink:0;}
+.kl-tab{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:6px 0;color:var(--ash-dim);cursor:pointer;font-family:var(--sans);transition:color .15s;}
+.kl-tab span{font-size:10px;font-weight:600;}
+.kl-tab.on{color:var(--blue);}
+.kl-tab svg{width:21px;height:21px;}
+
+@media (prefers-reduced-motion: reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+"use strict";
+
+/* ============================ Daten ============================ */
+var EX = {
+  bench_bb:{name:"Bankdrücken (LH)",reps:"5-8"}, incline_db:{name:"Schrägbankdrücken (KH)",reps:"8-12"},
+  ohp_bb:{name:"Schulterdrücken (LH)",reps:"6-10"}, dips:{name:"Dips",reps:"8-12"},
+  lateral_raise:{name:"Seitheben",reps:"12-20"}, tricep_push:{name:"Trizepsdrücken Kabel",reps:"10-15"},
+  cable_fly:{name:"Kabelzug Fliegende",reps:"12-15"}, oh_ext:{name:"Trizeps Überkopf",reps:"10-15"},
+  deadlift:{name:"Kreuzheben",reps:"3-6"}, pullup:{name:"Klimmzüge",reps:"6-12"},
+  row_bb:{name:"Langhantelrudern",reps:"6-10"}, lat_pull:{name:"Latzug",reps:"10-12"},
+  cable_row:{name:"Kabelrudern",reps:"10-12"}, face_pull:{name:"Face Pulls",reps:"15-20"},
+  curl_bb:{name:"Langhantel Curls",reps:"8-12"}, hammer_curl:{name:"Hammer Curls",reps:"10-15"},
+  rear_delt:{name:"Reverse Flys",reps:"15-20"},
+  squat:{name:"Kniebeugen",reps:"5-8"}, rdl:{name:"Rumänisches Kreuzheben",reps:"8-12"},
+  leg_press:{name:"Beinpresse",reps:"10-15"}, leg_curl:{name:"Beinbeuger",reps:"10-15"},
+  leg_ext:{name:"Beinstrecker",reps:"12-15"}, hip_thrust:{name:"Hip Thrust",reps:"8-12"},
+  lunge:{name:"Ausfallschritte",reps:"10-12"}, calf:{name:"Wadenheben",reps:"12-20"}
+};
+var LIBRARY = {
+  push:["bench_bb","incline_db","ohp_bb","dips","lateral_raise","tricep_push","cable_fly","oh_ext"],
+  pull:["deadlift","pullup","row_bb","lat_pull","cable_row","face_pull","curl_bb","hammer_curl","rear_delt"],
+  legs:["squat","rdl","leg_press","leg_curl","leg_ext","hip_thrust","lunge","calf"],
+  upper:["bench_bb","incline_db","ohp_bb","dips","lateral_raise","tricep_push","pullup","row_bb","lat_pull","cable_row","face_pull","curl_bb","hammer_curl","rear_delt"],
+  lower:["squat","rdl","leg_press","leg_curl","leg_ext","hip_thrust","lunge","calf"],
+  full:["squat","bench_bb","row_bb","ohp_bb","rdl","deadlift","pullup","curl_bb","lateral_raise","calf"]
+};
+var SLABEL = {push:"Push",pull:"Pull",legs:"Legs",upper:"Oberkörper",lower:"Unterkörper",full:"Ganzkörper",rest:"Pause"};
+var SPLITS = {
+  ppl6:{label:"Push / Pull / Legs",sub:"6 Tage",days:{mon:"push",tue:"pull",wed:"legs",thu:"push",fri:"pull",sat:"legs",sun:"rest"}},
+  ppl3:{label:"Push / Pull / Legs",sub:"3 Tage",days:{mon:"push",tue:"rest",wed:"pull",thu:"rest",fri:"legs",sat:"rest",sun:"rest"}},
+  ul4:{label:"Ober / Unter",sub:"4 Tage",days:{mon:"upper",tue:"lower",wed:"rest",thu:"upper",fri:"lower",sat:"rest",sun:"rest"}},
+  fb3:{label:"Ganzkörper",sub:"3 Tage",days:{mon:"full",tue:"rest",wed:"full",thu:"rest",fri:"full",sat:"rest",sun:"rest"}}
+};
+var DEFAULT_SETS = {
+  push:[["bench_bb",4],["incline_db",3],["ohp_bb",3],["lateral_raise",4],["tricep_push",3]],
+  pull:[["pullup",4],["row_bb",4],["lat_pull",3],["face_pull",3],["curl_bb",3]],
+  legs:[["squat",4],["rdl",3],["leg_press",3],["leg_curl",3],["calf",4]],
+  upper:[["bench_bb",3],["row_bb",3],["ohp_bb",3],["lat_pull",3],["lateral_raise",3],["curl_bb",2],["tricep_push",2]],
+  lower:[["squat",4],["rdl",3],["leg_press",3],["leg_curl",3],["calf",4]],
+  full:[["squat",3],["bench_bb",3],["row_bb",3],["ohp_bb",2],["curl_bb",2],["calf",3]]
+};
+var DEFAULT_HABITS = [
+  {id:"protein",label:"Protein-Ziel erreicht"},{id:"steps",label:"Schritte-Ziel erreicht"},
+  {id:"water",label:"2.5 L Wasser"},{id:"sleep",label:"7+ Stunden Schlaf"}
+];
+var WEEK = [["mon","Mo","Montag"],["tue","Di","Dienstag"],["wed","Mi","Mittwoch"],["thu","Do","Donnerstag"],["fri","Fr","Freitag"],["sat","Sa","Samstag"],["sun","So","Sonntag"]];
+var JS_KEY = ["sun","mon","tue","wed","thu","fri","sat"];
+var MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+var GOALS = ["Muskelaufbau","Abnehmen","Kraft steigern","Definition","Gewicht halten"];
+
+/* ============================ State ============================ */
+var LS = "kernlast.v2";
+var state = defaultState();
+
+function defaultState(){
+  var ex = {};
+  Object.keys(DEFAULT_SETS).forEach(function(c){ ex[c] = DEFAULT_SETS[c].map(function(p){ return {id:p[0],sets:p[1]}; }); });
+  return {
+    profile:{ name:"", heightCm:"", weightKg:"", goal:"Muskelaufbau", proteinTarget:"150", kcalTarget:"2400", stepTarget:"10000" },
+    config:{ split:"ppl6", days:Object.assign({},SPLITS.ppl6.days), exercises:ex, habits:DEFAULT_HABITS.map(function(h){return {id:h.id,label:h.label};}) },
+    customExercises:{},
+    days:{},
+    ui:{ tab:"today", selectedDate:null, splitCat:"push", cal:null }
+  };
+}
+function load(){
+  try{ var raw = localStorage.getItem(LS); if(raw){ var p = JSON.parse(raw); state = deepMerge(defaultState(), p); state.ui = defaultState().ui; if(p.ui&&p.ui.splitCat) state.ui.splitCat=p.ui.splitCat; } }catch(e){}
+}
+function deepMerge(base, over){
+  if(Array.isArray(over)) return over;
+  if(over && typeof over==="object"){ var out = Array.isArray(base)?[]:Object.assign({},base);
+    Object.keys(over).forEach(function(k){ out[k] = (k in base) ? deepMerge(base[k], over[k]) : over[k]; }); return out; }
+  return over===undefined?base:over;
+}
+var saveT=null;
+function save(){ clearTimeout(saveT); saveT=setTimeout(function(){ try{ localStorage.setItem(LS, JSON.stringify({profile:state.profile,config:state.config,customExercises:state.customExercises,days:state.days,ui:{splitCat:state.ui.splitCat}})); }catch(e){} },350); }
+
+/* ============================ Helpers ============================ */
+function pad(n){ return n<10?"0"+n:""+n; }
+function dateStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function parseISO(s){ var a=s.split("-"); return new Date(+a[0], +a[1]-1, +a[2]); }
+function todayStr(){ return dateStr(new Date()); }
+function selDate(){ return state.ui.selectedDate || todayStr(); }
+function isToday(ds){ return ds===todayStr(); }
+function longDate(d){ return WEEK[(d.getDay()+6)%7][1]+", "+d.getDate()+". "+MONTHS[d.getMonth()]; }
+function num(v){ if(v===""||v===null||v===undefined) return null; var n=Number(v); return isNaN(n)?null:n; }
+function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+function ensureDay(ds){ if(!state.days[ds]) state.days[ds]={recovery:{},health:{},log:{},habits:{},custom:[],sessionDone:false}; var d=state.days[ds]; d.recovery=d.recovery||{}; d.health=d.health||{}; d.log=d.log||{}; d.habits=d.habits||{}; d.custom=d.custom||[]; return d; }
+function exName(id){ return (EX[id]&&EX[id].name) || (state.customExercises[id]&&state.customExercises[id].name) || id; }
+function exReps(id){ return (EX[id]&&EX[id].reps) || (state.customExercises[id]&&state.customExercises[id].reps) || ""; }
+function sessionTypeFor(ds){ return state.config.days[JS_KEY[parseISO(ds).getDay()]] || "rest"; }
+
+function computeReadiness(rec){
+  if(!rec) return null;
+  var sleep=num(rec.sleepScore), ans=num(rec.ans), feel=num(rec.feel);
+  if(sleep===null && ans===null && feel===null) return null;
+  var base = sleep!==null ? sleep : (feel!==null ? ({1:25,2:45,3:62,4:80,5:90})[feel] : 60);
+  var s = base;
+  if(ans!==null) s += ans*2;
+  if(feel!==null && sleep!==null) s += (feel-3)*5;
+  return Math.round(clamp(s,0,100));
+}
+function band(s){
+  if(s===null) return {factor:1,label:"Keine Erholungsdaten",sub:"Trage Werte unter Gesundheit ein."};
+  if(s>=85) return {factor:1.10,label:"Grünes Licht",sub:"Volle Power. Ziel RIR 0 bis 1."};
+  if(s>=70) return {factor:1.00,label:"Planmässig",sub:"Training wie geplant. Ziel RIR 1 bis 2."};
+  if(s>=55) return {factor:0.85,label:"Leicht reduziert",sub:"Volumen etwas runter. Ziel RIR 2 bis 3."};
+  if(s>=40) return {factor:0.65,label:"Reduziert",sub:"Leichter, Technik im Fokus. Ziel RIR 3."};
+  return {factor:0,label:"Erholung empfohlen",sub:"Heute aktive Erholung oder Pause."};
+}
+function readinessColor(s){
+  if(s===null) return "#5E7384";
+  if(s<40) return "#FF6B61"; if(s<55) return "#FF9F45"; if(s<70) return "#FFC53D"; if(s<85) return "#5BD6A6"; return "#2FBF71";
+}
+function adjSets(base,f){ if(f<=0) return 0; return Math.max(1, Math.round(base*f)); }
+
+function lastLogFor(exId, beforeDs){
+  var keys = Object.keys(state.days).filter(function(k){ return k<beforeDs; }).sort().reverse();
+  for(var i=0;i<keys.length;i++){
+    var lg = state.days[keys[i]].log && state.days[keys[i]].log[exId];
+    if(lg && lg.some(function(s){ return (s.w!==""&&s.w!=null) || (s.reps!==""&&s.reps!=null); })) return {date:keys[i], sets:lg};
+  }
+  return null;
+}
+function computeStreak(){
+  var streak=0;
+  for(var i=0;i<120;i++){
+    var dt=new Date(); dt.setDate(dt.getDate()-i);
+    var ds=dateStr(dt); var type=state.config.days[JS_KEY[dt.getDay()]]||"rest";
+    var day=state.days[ds];
+    var adh = type==="rest" ? true : !!(day && day.sessionDone);
+    if(i===0 && !adh) continue;
+    if(adh) streak++; else break;
+  }
+  return streak;
+}
+function bmiVal(){ var h=num(state.profile.heightCm), w=num(state.profile.weightKg); if(!h||!w) return null; return w/Math.pow(h/100,2); }
+
+/* seed today's logs from last time, grow set rows to plan */
+function prepareDay(ds){
+  var day = ensureDay(ds);
+  var type = sessionTypeFor(ds);
+  if(type==="rest") return;
+  var f = band(computeReadiness(day.recovery)).factor;
+  (state.config.exercises[type]||[]).forEach(function(e){
+    var n = adjSets(e.sets, f);
+    if(!day.log[e.id]){
+      var last = lastLogFor(e.id, ds); var seed=[];
+      for(var i=0;i<n;i++){ var ls = last && last.sets[i]; seed.push({w: ls?ls.w:"", reps: ls?ls.reps:"", done:false}); }
+      day.log[e.id]=seed;
+    } else {
+      var arr = day.log[e.id];
+      while(arr.length<n){ var last2=lastLogFor(e.id,ds); var ls2=last2&&last2.sets[arr.length]; arr.push({w:ls2?ls2.w:"",reps:ls2?ls2.reps:"",done:false}); }
+    }
+  });
+}
+
+/* ============================ Icons ============================ */
+var I = {
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A4.5 4.5 0 0 0 17.5 4c-1.76 0-3 .5-4 2h-1c-1-1.5-2.24-2-4-2A4.5 4.5 0 0 0 4 8.5c0 2.3 1.5 4 3 5.5l5 5z"/><path d="M3.22 12H9.5l.5-1 2 4 1.5-3 1 1h6.27"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>',
+  dumbbell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M21 21l-1-1M3 3l1 1"/><path d="m6.5 12-2-2a1.4 1.4 0 0 1 0-2l1-1a1.4 1.4 0 0 1 2 0l2 2M18 12l2 2a1.4 1.4 0 0 1 0 2l-1 1a1.4 1.4 0 0 1-2 0l-2-2"/></svg>',
+  pulse:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+  flame:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 4-2 5-2 8a4 4 0 0 0 8 0c0-2-1-3-1-3 2 1 3 3.5 3 6a7 7 0 1 1-14 0c0-4 3-6 4-8 1-1.5 2-1 2 0z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  minus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  left:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  battery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="8" rx="2"/><path d="M22 11v2M10 8l-2 8h3l-2 0"/></svg>'
+};
+
+/* ============================ Render ============================ */
+function gauge(score){
+  var r=64,C=2*Math.PI*r,arc=0.75, val=(score===null?0:score/100), col=readinessColor(score);
+  return '<svg viewBox="0 0 160 160" width="160" height="160">'
+    +'<g transform="rotate(135 80 80)">'
+    +'<circle cx="80" cy="80" r="64" fill="none" stroke="#22303D" stroke-width="13" stroke-dasharray="'+(arc*C)+' '+C+'" stroke-linecap="round"/>'
+    +'<circle cx="80" cy="80" r="64" fill="none" stroke="'+col+'" stroke-width="13" stroke-dasharray="'+(val*arc*C)+' '+C+'" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/>'
+    +'</g>'
+    +'<text x="80" y="76" text-anchor="middle" class="kl-gnum" fill="#EAF1F7">'+(score===null?"--":score)+'</text>'
+    +'<text x="80" y="97" text-anchor="middle" class="kl-gcap" fill="#8DA0B2">ERHOLUNG</text></svg>';
+}
+function spark(values, color){
+  var pts = values.map(function(v,i){ return {v:v,i:i}; }).filter(function(p){ return p.v!==null; });
+  if(pts.length<2) return '<div class="kl-spark-empty">Noch zu wenig Daten. Trag ein paar Tage ein.</div>';
+  var W=320,H=64,pdY=8;
+  var vs = pts.map(function(p){return p.v;});
+  var mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs); if(mx===mn){mx=mn+1;}
+  var n=values.length;
+  function X(i){ return n<=1?0:(i/(n-1))*W; }
+  function Y(v){ return H-pdY-((v-mn)/(mx-mn))*(H-2*pdY); }
+  var d=""; pts.forEach(function(p,k){ d += (k===0?"M":"L")+X(p.i).toFixed(1)+" "+Y(p.v).toFixed(1)+" "; });
+  var last=pts[pts.length-1];
+  return '<svg class="kl-spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'
+    +'<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+    +'<circle cx="'+X(last.i).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3.5" fill="'+color+'"/></svg>';
+}
+
+function shell(content){
+  var sel=selDate(), d=parseISO(sel), streak=computeStreak();
+  var back = isToday(sel) ? "" : '<button class="kl-backtoday" data-action="backtoday">heute</button>';
+  var tabs=[["today","Heute",I.heart],["calendar","Kalender",I.cal],["split","Split",I.dumbbell],["health","Gesundheit",I.pulse],["profile","Profil",I.user]];
+  var nav=tabs.map(function(t){ return '<button class="kl-tab '+(state.ui.tab===t[0]?"on":"")+'" data-action="tab:'+t[0]+'">'+t[2]+'<span>'+t[1]+'</span></button>'; }).join("");
+  return '<div class="kl-shell">'
+    +'<header class="kl-header"><div><div class="kl-brand">KERNLAST</div><div class="kl-date">'+longDate(d)+back+'</div></div>'
+    +'<div class="kl-streak"><span style="color:'+(streak>0?"#FFB020":"#5E7384")+';display:flex">'+I.flame+'</span><span class="mono" style="color:'+(streak>0?"#FFB020":"#5E7384")+'">'+streak+'</span></div></header>'
+    +'<main class="kl-main">'+content+'</main>'
+    +'<nav class="kl-nav">'+nav+'</nav></div>';
+}
+
+function viewHTML(){
+  switch(state.ui.tab){
+    case "today": return renderToday();
+    case "calendar": return renderCalendar();
+    case "split": return renderSplit();
+    case "health": return renderHealth();
+    case "profile": return renderProfile();
+  }
+  return "";
+}
+
+function renderToday(){
+  var ds=selDate(); prepareDay(ds); var day=ensureDay(ds);
+  var readiness=computeReadiness(day.recovery), b=band(readiness), col=readinessColor(readiness);
+  var type=sessionTypeFor(ds), exs=state.config.exercises[type]||[];
+  var html='<div class="kl-page">';
+
+  html+='<section class="kl-card kl-readi">'+gauge(readiness)
+    +'<div class="kl-readi-body"><div class="kl-readi-label" style="color:'+col+'">'+b.label+'</div>'
+    +'<div class="kl-readi-sub">'+b.sub+'</div>'
+    +(readiness===null?'<button class="kl-btn kl-btn-blue" style="margin-top:10px" data-action="tab:health">Werte eintragen</button>':'')
+    +'</div></section>';
+
+  if(type==="rest"){
+    html+='<section class="kl-card kl-rest"><span class="ash" style="display:flex">'+I.moon+'</span><div><div class="kl-h2">Pausentag</div><div class="ash" style="font-size:12.5px">Heute keine Einheit im Plan. Erholung ist Teil des Trainings.</div></div></section>';
+  } else if(b.factor<=0){
+    html+='<section class="kl-card"><div class="kl-banner kl-banner-red">'+I.battery+'<span>Deine Werte sprechen für Erholung. Heute lieber Spaziergang, lockeres Cardio oder Mobility statt harter Einheit.</span></div></section>';
+  } else {
+    var totalAdj=0, doneSets=0;
+    exs.forEach(function(e){ var n=adjSets(e.sets,b.factor); totalAdj+=n; var lg=day.log[e.id]||[]; for(var i=0;i<n;i++){ if(lg[i]&&lg[i].done) doneSets++; } });
+    html+='<section class="kl-card"><div class="kl-session-head"><div><div class="kl-eyebrow">Heutige Einheit</div><div class="kl-h1">'+SLABEL[type]+'</div></div>'
+      +'<div class="kl-meta-num"><span class="mono" id="klSessCnt" style="color:'+col+'">'+doneSets+'/'+totalAdj+'</span><span class="ash" style="font-size:10px">Sätze erledigt</span></div></div>';
+    if(b.factor!==1 && readiness!==null) html+='<div class="kl-adj" style="color:'+col+'">'+(b.factor>1?"Volumen erhöht":"Volumen angepasst")+' ('+Math.round(b.factor*100)+'% nach Erholung)</div>';
+
+    exs.forEach(function(e){
+      var n=adjSets(e.sets,b.factor); var lg=day.log[e.id]||[];
+      var last=lastLogFor(e.id,ds);
+      var lastTxt="Erste Einheit";
+      if(last){ var parts=last.sets.filter(function(s){return s.reps!==""&&s.reps!=null;}).map(function(s){ return (s.w!==""&&s.w!=null?s.w:"-")+"×"+s.reps; }); if(parts.length) lastTxt="Letztes Mal: "+parts.join(" · "); }
+      var doneN=0; for(var z=0;z<n;z++){ if(lg[z]&&lg[z].done) doneN++; }
+      var rows="";
+      for(var i=0;i<n;i++){ var st=lg[i]||{w:"",reps:"",done:false};
+        rows+='<div class="kl-setrow"><span class="kl-set-i mono">'+(i+1)+'</span>'
+          +'<input class="kl-num" inputmode="decimal" placeholder="kg" value="'+esc(st.w)+'" data-day="log.'+e.id+'.'+i+'.w">'
+          +'<input class="kl-num" inputmode="numeric" placeholder="'+exReps(e.id)+'" value="'+esc(st.reps)+'" data-day="log.'+e.id+'.'+i+'.reps">'
+          +'<button class="kl-set-done '+(st.done?"on":"")+'" data-action="setdone:'+e.id+':'+i+'">'+I.check+'</button></div>';
+      }
+      html+='<div class="kl-ex"><div class="kl-ex-head"><div><div class="kl-ex-name">'+exName(e.id)+'</div><div class="kl-ex-last">'+lastTxt+'</div></div><div class="kl-ex-cnt mono">'+doneN+'/'+n+'</div></div>'
+        +'<div class="kl-set-hdr"><span>Satz</span><span>Gewicht</span><span>Wdh</span><span></span></div>'
+        +'<div class="kl-sets">'+rows+'</div>'
+        +'<div class="kl-set-actions"><button class="kl-mini" data-action="addset:'+e.id+'">'+I.plus+' Satz</button><button class="kl-mini" data-action="rmset:'+e.id+'">'+I.minus+' Satz</button></div></div>';
+    });
+
+    html+='<div style="margin-top:14px">'+ (day.sessionDone
+      ? '<button class="kl-btn kl-btn-ghost kl-full" data-action="marksession:0">Einheit zurücksetzen</button>'
+      : '<button class="kl-btn kl-btn-blue kl-full" data-action="marksession:1">'+I.check+' Einheit abschliessen</button>')+'</div>';
+    html+='</section>';
+  }
+
+  // Tagesziele
+  html+=renderGoals(ds, type, b.factor);
+  html+='</div>';
+  return html;
+}
+
+function renderGoals(ds, type, factor){
+  var day=ensureDay(ds);
+  var items=[];
+  if(type!=="rest" && factor>0) items.push({id:"__session",label:SLABEL[type]+" abschliessen",done:day.sessionDone});
+  state.config.habits.forEach(function(h){ items.push({id:"h_"+h.id,label:h.label,done:!!day.habits[h.id],habit:h.id}); });
+  (day.custom||[]).forEach(function(c){ items.push({id:"c_"+c.id,label:c.label,done:c.done,custom:c.id}); });
+  var done=items.filter(function(g){return g.done;}).length;
+  var rows=items.map(function(g){
+    return '<div class="kl-goal"><button class="kl-check '+(g.done?"on":"")+'" data-action="goal:'+g.id+'">'+(g.done?I.check:"")+'</button>'
+      +'<span class="'+(g.done?"kl-goal-done":"")+'">'+esc(g.label)+'</span>'
+      +(g.custom?'<button class="kl-del" data-action="delgoal:'+g.custom+'">'+I.trash+'</button>':'')+'</div>';
+  }).join("");
+  return '<section class="kl-card"><div class="kl-goals-head"><div class="kl-eyebrow">Tagesziele</div><div class="mono" style="font-size:14px;color:'+(items.length&&done===items.length?"#2FBF71":"#EAF1F7")+'">'+done+'/'+items.length+'</div></div>'
+    +'<div>'+(rows||'<div class="ash">Keine Ziele.</div>')+'</div>'
+    +'<div class="kl-add"><input id="klNewGoal" placeholder="Eigenes Ziel hinzufügen"><button data-action="addgoal">'+I.plus+'</button></div></section>';
+}
+
+function renderCalendar(){
+  if(!state.ui.cal){ var n=new Date(); state.ui.cal={y:n.getFullYear(),m:n.getMonth()}; }
+  var y=state.ui.cal.y, m=state.ui.cal.m;
+  var first=new Date(y,m,1); var startDow=(first.getDay()+6)%7; var dim=new Date(y,m+1,0).getDate();
+  var sel=selDate(), tStr=todayStr();
+  var cells="";
+  for(var i=0;i<startDow;i++) cells+='<div class="kl-cell empty"></div>';
+  for(var dnum=1;dnum<=dim;dnum++){
+    var ds=y+"-"+pad(m+1)+"-"+pad(dnum);
+    var type=sessionTypeFor(ds); var day=state.days[ds];
+    var cls="kl-cell"; if(ds===tStr) cls+=" today"; if(ds===sel) cls+=" sel"; if(day&&day.sessionDone) cls+=" done";
+    var letter = type==="rest" ? "" : SLABEL[type].charAt(0);
+    var lcol = type==="rest" ? "#5E7384" : "#4C8DFF";
+    cells+='<div class="'+cls+'" data-action="calsel:'+ds+'"><span class="kl-cell-n">'+dnum+'</span>'+(letter?'<span class="kl-cell-t" style="color:'+lcol+'">'+letter+'</span>':'')+'</div>';
+  }
+  var dows=["Mo","Di","Mi","Do","Fr","Sa","So"].map(function(x){return '<span>'+x+'</span>';}).join("");
+
+  // detail of selected day
+  var dsel=parseISO(sel); var stype=sessionTypeFor(sel); var dd=state.days[sel];
+  var r = dd ? computeReadiness(dd.recovery) : null;
+  var detail='<div class="kl-cal-detail"><div class="kl-eyebrow" style="margin-bottom:8px">'+longDate(dsel)+'</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div class="kl-h2">'+SLABEL[stype]+'</div>'
+    +'<div class="ash" style="font-size:12px;margin-top:3px">'+(stype==="rest"?"Pausentag":(dd&&dd.sessionDone?"Abgeschlossen":"Geplant"))+(r!==null?" · Erholung "+r:"")+'</div></div>'
+    +(stype!=="rest"?'<button class="kl-btn kl-btn-blue" data-action="opensel">'+(isToday(sel)?"Zum Training":"Einheit öffnen")+'</button>':'')+'</div></div>';
+
+  return '<div class="kl-page"><div class="kl-eyebrow kl-pad">Trainingskalender</div>'
+    +'<div class="kl-sub-note kl-pad">Buchstabe = geplante Einheit (P Push, P Pull, L Legs, O Ober, U Unter, G Ganz). Grüner Rahmen heisst erledigt. Tippe einen Tag an.</div>'
+    +'<section class="kl-card"><div class="kl-cal-head"><button class="kl-cal-nav" data-action="calprev">'+I.left+'</button>'
+    +'<div class="kl-cal-title">'+MONTHS[m]+' '+y+'</div><button class="kl-cal-nav" data-action="calnext">'+I.right+'</button></div>'
+    +'<div class="kl-cal-dow">'+dows+'</div><div class="kl-cal-grid">'+cells+'</div>'+detail+'</section></div>';
+}
+
+function renderSplit(){
+  var cat=state.ui.splitCat;
+  var used=[]; Object.keys(state.config.days).forEach(function(k){ var t=state.config.days[k]; if(t!=="rest"&&used.indexOf(t)<0) used.push(t); });
+  if(used.indexOf(cat)<0) cat=used[0]||"push";
+  var splitCards=Object.keys(SPLITS).map(function(key){ var s=SPLITS[key];
+    return '<button class="kl-split-card '+(state.config.split===key?"on":"")+'" data-action="split:'+key+'"><div class="kl-split-label">'+s.label+'</div><div class="kl-split-sub">'+s.sub+'</div>'+(state.config.split===key?'<div class="kl-split-act">'+I.check+'</div>':'')+'</button>';
+  }).join("");
+
+  // day assignment
+  var dayCards=WEEK.map(function(w){
+    var type=state.config.days[w[0]]||"rest";
+    var baseSets=(state.config.exercises[type]||[]).reduce(function(a,e){return a+e.sets;},0);
+    var open=state.ui.openDay===w[0];
+    var opts=["push","pull","legs","upper","lower","full","rest"].map(function(o){ return '<button class="kl-chip '+(type===o?"on":"")+'" data-action="setday:'+w[0]+':'+o+'">'+SLABEL[o]+'</button>'; }).join("");
+    return '<div class="kl-daycard"><button class="kl-daymain" data-action="openday:'+w[0]+'"><div class="kl-dayleft"><div class="kl-daydot '+(type==="rest"?"rest":"")+'"></div><div><div class="kl-dayname">'+w[2]+'</div><div class="kl-daytype">'+SLABEL[type]+(type!=="rest"?" · "+baseSets+" Sätze":"")+'</div></div></div><span class="ash" style="display:flex;transform:rotate('+(open?90:0)+'deg);transition:.2s">'+I.chev+'</span></button>'+(open?'<div class="kl-dayopts">'+opts+'</div>':'')+'</div>';
+  }).join("");
+
+  var sel=state.config.exercises[cat]||[];
+  var selIds=sel.map(function(e){return e.id;});
+  var avail=(LIBRARY[cat]||[]).filter(function(id){return selIds.indexOf(id)<0;});
+  Object.keys(state.customExercises).forEach(function(id){ if(state.customExercises[id].cat===cat && selIds.indexOf(id)<0) avail.push(id); });
+
+  var catTabs=used.map(function(c){ return '<button class="kl-tab2 '+(cat===c?"on":"")+'" data-action="cat:'+c+'">'+SLABEL[c]+'</button>'; }).join("");
+  var rows=sel.map(function(e){
+    return '<div class="kl-cfg-row"><div class="kl-cfg-name">'+exName(e.id)+'<div class="ash" style="font-size:11px">'+exReps(e.id)+' Wdh</div></div>'
+      +'<div class="kl-stepper"><button data-action="sets:'+cat+':'+e.id+':-1">'+I.minus+'</button><span class="mono">'+e.sets+'</span><button data-action="sets:'+cat+':'+e.id+':1">'+I.plus+'</button></div>'
+      +'<button class="kl-del" data-action="remex:'+cat+':'+e.id+'">'+I.trash+'</button></div>';
+  }).join("");
+  var availChips=avail.map(function(id){ return '<button class="kl-chip" data-action="addex:'+cat+':'+id+'">'+I.plus+' '+exName(id)+'</button>'; }).join("");
+
+  return '<div class="kl-page"><div class="kl-eyebrow kl-pad">Split wählen</div>'
+    +'<div class="kl-split-grid">'+splitCards+'</div>'
+    +'<div class="kl-eyebrow kl-pad" style="margin-top:18px">Trainingstage</div>'
+    +'<div class="kl-sub-note kl-pad">Tippe einen Tag an, um die Einheit zu wechseln.</div>'
+    +'<div class="kl-week">'+dayCards+'</div>'
+    +'<div class="kl-eyebrow kl-pad" style="margin-top:18px">Übungen und Sätze</div>'
+    +'<div class="kl-tabs2">'+catTabs+'</div>'
+    +'<section class="kl-card" style="padding:4px 16px">'+(rows||'<div class="ash" style="padding:12px 0">Keine Übungen. Unten hinzufügen.</div>')+'</section>'
+    +(availChips?'<div class="kl-add-label">Übung hinzufügen</div><div class="kl-chips">'+availChips+'</div>':'')
+    +'<div class="kl-add-label">Eigene Übung</div><div class="kl-add"><input id="klCustomEx" placeholder="Name der Übung"><button data-action="addcustom:'+cat+'">'+I.plus+'</button></div>'
+    +'</div>';
+}
+
+function renderHealth(){
+  var ds=selDate(); var day=ensureDay(ds);
+  var r=day.recovery, h=day.health;
+  var readiness=computeReadiness(r), col=readinessColor(readiness);
+  var sleep=r.sleepScore!==undefined&&r.sleepScore!==""?r.sleepScore:"80";
+  var ans=r.ans!==undefined&&r.ans!==""?r.ans:"0";
+
+  function tgt(label,val,target,unit,color,id){
+    var v=num(val)||0, t=num(target)||1, pct=clamp(v/t*100,0,100);
+    return '<div class="kl-target"><div class="kl-tlabel"><span>'+label+'</span><span class="mono" id="klVal'+id+'">'+(v||0)+' / '+(num(target)||0)+' '+unit+'</span></div><div class="kl-bar"><div id="klBar'+id+'" style="width:'+pct+'%;background:'+color+'"></div></div></div>';
+  }
+
+  return '<div class="kl-page"><div class="kl-eyebrow kl-pad">Erholung & Gesundheit</div>'
+    +'<div class="kl-sub-note kl-pad">Werte morgens aus Polar Flow ablesen und hier eintragen. Sleep Score und ANS steuern die Trainingsanpassung.</div>'
+
+    +'<section class="kl-card"><div class="kl-eyebrow" style="margin-bottom:14px">Erholung</div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Sleep Score</span><span class="mono" id="klSleepV">'+sleep+'</span></div><input type="range" class="kl-range" min="0" max="100" step="1" value="'+sleep+'" data-day="recovery.sleepScore" data-live="sleep"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>ANS Balance (Nightly Recharge)</span><span class="mono" id="klAnsV">'+(num(ans)>0?"+":"")+ans+'</span></div><input type="range" class="kl-range" min="-10" max="10" step="1" value="'+ans+'" data-day="recovery.ans" data-live="ans"><div class="kl-cap-row"><span>schwach</span><span>ausgeglichen</span><span>stark</span></div></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Wie fühlst du dich</span></div><div class="kl-feel">'+[1,2,3,4,5].map(function(f){return '<button class="kl-feel-btn '+(num(r.feel)===f?"on":"")+'" data-action="feel:'+f+'">'+f+'</button>';}).join("")+'</div><div class="kl-cap-row"><span>angeschlagen</span><span>topfit</span></div></div>'
+    +'<div class="kl-result" style="border-color:'+col+'"><span class="ash" style="font-size:12.5px">Berechnete Erholung</span><span class="mono" id="klReadi" style="font-size:22px;color:'+col+'">'+(readiness===null?"--":readiness)+'</span></div></section>'
+
+    +'<section class="kl-card"><div class="kl-eyebrow" style="margin-bottom:14px">Ernährung & Aktivität</div>'
+    +'<div class="kl-grid2">'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Schritte</span></div><input class="kl-input mono" inputmode="numeric" placeholder="0" value="'+esc(h.steps||"")+'" data-day="health.steps" data-live="steps"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Kalorien</span></div><input class="kl-input mono" inputmode="numeric" placeholder="kcal" value="'+esc(h.kcal||"")+'" data-day="health.kcal" data-live="kcal"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Protein (g)</span></div><input class="kl-input mono" inputmode="numeric" placeholder="g" value="'+esc(h.protein||"")+'" data-day="health.protein" data-live="protein"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Körpergewicht (kg)</span></div><input class="kl-input mono" inputmode="decimal" placeholder="kg" value="'+esc(h.weight||"")+'" data-day="health.weight"></div>'
+    +'</div></section>'
+
+    +'<section class="kl-card"><div class="kl-eyebrow" style="margin-bottom:14px">Tagesziele Ernährung</div>'
+    +tgt("Protein", h.protein, state.profile.proteinTarget, "g", "#4C8DFF", "Protein")
+    +tgt("Kalorien", h.kcal, state.profile.kcalTarget, "kcal", "#FFB020", "Kcal")
+    +tgt("Schritte", h.steps, state.profile.stepTarget, "", "#2FBF71", "Steps")
+    +'</section>'
+
+    +'<section class="kl-card"><div class="kl-eyebrow" style="margin-bottom:6px">Verlauf Erholung (14 Tage)</div><div class="kl-spark-wrap">'+spark(trendReadiness(14),"#4C8DFF")+'</div></section>'
+    +'<section class="kl-card"><div class="kl-eyebrow" style="margin-bottom:6px">Verlauf Gewicht (30 Tage)</div><div class="kl-spark-wrap">'+spark(trendWeight(30),"#2FBF71")+'</div></section>'
+    +'</div>';
+}
+
+function trendReadiness(days){
+  var out=[]; for(var i=days-1;i>=0;i--){ var dt=new Date(); dt.setDate(dt.getDate()-i); var d=state.days[dateStr(dt)]; out.push(d?computeReadiness(d.recovery):null); } return out;
+}
+function trendWeight(days){
+  var out=[]; for(var i=days-1;i>=0;i--){ var dt=new Date(); dt.setDate(dt.getDate()-i); var d=state.days[dateStr(dt)]; out.push(d&&d.health?num(d.health.weight):null); } return out;
+}
+
+function renderProfile(){
+  var p=state.profile, bmi=bmiVal();
+  var goalOpts=GOALS.map(function(g){return '<option '+(p.goal===g?"selected":"")+'>'+g+'</option>';}).join("");
+  var resetUI = state.ui.confirmReset
+    ? '<div class="kl-body" style="margin-bottom:10px">Das löscht Plan, Erholungsdaten und alle Logs endgültig. Sicher?</div><div class="kl-row"><button class="kl-btn kl-btn-ghost kl-full" data-action="cancelreset">Abbrechen</button><button class="kl-btn kl-btn-red kl-full" data-action="doreset">Ja, löschen</button></div>'
+    : '<button class="kl-btn kl-btn-ghost kl-full" data-action="askreset">Alle Daten zurücksetzen</button>';
+
+  return '<div class="kl-page"><div class="kl-eyebrow kl-pad">Dein Profil</div>'
+    +'<section class="kl-card">'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Name</span></div><input class="kl-input" placeholder="optional" value="'+esc(p.name)+'" data-state="profile.name"></div>'
+    +'<div class="kl-grid2"><div class="kl-field"><div class="kl-flabel"><span>Grösse (cm)</span></div><input class="kl-input mono" inputmode="numeric" placeholder="cm" value="'+esc(p.heightCm)+'" data-state="profile.heightCm" data-live="bmi"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Gewicht (kg)</span></div><input class="kl-input mono" inputmode="decimal" placeholder="kg" value="'+esc(p.weightKg)+'" data-state="profile.weightKg" data-live="bmi"></div></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Ziel</span></div><select class="kl-select" data-state="profile.goal">'+goalOpts+'</select></div>'
+    +(bmi?'<div class="kl-result" style="border-color:#283643"><span class="ash" style="font-size:12.5px">BMI</span><span class="kl-bmi"><span class="mono" id="klBmi">'+bmi.toFixed(1)+'</span><span class="ash" style="font-size:12px">'+bmiCat(bmi)+'</span></span></div>':'')
+    +'</section>'
+
+    +'<div class="kl-eyebrow kl-pad">Tagesziele</div>'
+    +'<section class="kl-card"><div class="kl-grid2">'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Protein (g)</span></div><input class="kl-input mono" inputmode="numeric" value="'+esc(p.proteinTarget)+'" data-state="profile.proteinTarget"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Kalorien</span></div><input class="kl-input mono" inputmode="numeric" value="'+esc(p.kcalTarget)+'" data-state="profile.kcalTarget"></div>'
+    +'<div class="kl-field"><div class="kl-flabel"><span>Schritte</span></div><input class="kl-input mono" inputmode="numeric" value="'+esc(p.stepTarget)+'" data-state="profile.stepTarget"></div>'
+    +'</div></section>'
+
+    +'<div class="kl-eyebrow kl-pad">Polar Flow</div>'
+    +'<section class="kl-card"><div class="kl-polar-head"><div class="kl-polar-icon">'+I.link+'</div><div class="kl-h2">So läuft die Verbindung</div></div>'
+    +'<p class="kl-body">Eine echte Live-Synchronisation läuft über die Polar AccessLink API mit OAuth 2.0 und braucht ein Client Secret auf einem eigenen Server. Eine reine Browser-App kann das nicht leisten. Darum trägst du Sleep Score, ANS, Schlaf und Co. morgens manuell unter Gesundheit ein. Genau diese Werte steuern die Planung.</p>'
+    +'<div class="kl-steps-label">Für die echte Anbindung (eigener Server)</div>'
+    +'<ol class="kl-steps"><li>Auf admin.polaraccesslink.com mit dem Polar-Flow-Konto anmelden und einen Client erstellen.</li><li>OAuth2 Callback-URL hinterlegen, Client ID und Secret sichern.</li><li>Kleiner Backend-Dienst, der Token hält und Daten abruft: Trainings, Schlaf, Nightly Recharge, Cardio Load.</li></ol></section>'
+
+    +'<div class="kl-eyebrow kl-pad">Daten</div>'
+    +'<section class="kl-card"><button class="kl-btn kl-btn-ghost kl-full" style="margin-bottom:10px" data-action="export">Daten exportieren (Backup)</button>'+resetUI
+    +'<div class="kl-foot">Deine Daten bleiben lokal auf diesem Gerät.</div></section>'
+    +'</div>';
+}
+function bmiCat(b){ if(b<18.5)return "Untergewicht"; if(b<25)return "Normalgewicht"; if(b<30)return "Übergewicht"; return "Adipositas"; }
+
+/* ============================ Util ============================ */
+function esc(v){ if(v===null||v===undefined) return ""; return (""+v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function setPath(root, path, val){
+  var parts=path.split("."), o=root;
+  for(var i=0;i<parts.length-1;i++){ var k=parts[i]; if(o[k]===undefined||o[k]===null){ o[k] = /^\d+$/.test(parts[i+1])?[]:{}; } o=o[k]; }
+  o[parts[parts.length-1]]=val;
+}
+
+/* ============================ Render driver ============================ */
+function render(opts){
+  opts=opts||{};
+  var main=document.querySelector(".kl-main"); var sc=main?main.scrollTop:0;
+  document.getElementById("app").innerHTML = shell(viewHTML());
+  var m2=document.querySelector(".kl-main"); if(m2) m2.scrollTop = opts.top?0:sc;
+}
+
+/* live updates without full re-render */
+function refreshHealthLive(){
+  var ds=selDate(); var day=ensureDay(ds);
+  var readiness=computeReadiness(day.recovery), col=readinessColor(readiness);
+  var rEl=document.getElementById("klReadi"); if(rEl){ rEl.textContent=(readiness===null?"--":readiness); rEl.style.color=col; var box=rEl.closest(".kl-result"); if(box) box.style.borderColor=col; }
+  var sv=document.getElementById("klSleepV"); if(sv) sv.textContent=(day.recovery.sleepScore!==undefined&&day.recovery.sleepScore!==""?day.recovery.sleepScore:"80");
+  var av=document.getElementById("klAnsV"); if(av){ var a=num(day.recovery.ans); av.textContent=(a>0?"+":"")+(day.recovery.ans!==undefined&&day.recovery.ans!==""?day.recovery.ans:"0"); }
+  updateTarget("Protein", day.health.protein, state.profile.proteinTarget, "g");
+  updateTarget("Kcal", day.health.kcal, state.profile.kcalTarget, "kcal");
+  updateTarget("Steps", day.health.steps, state.profile.stepTarget, "");
+}
+function updateTarget(id, val, target, unit){
+  var v=num(val)||0, t=num(target)||1, pct=clamp(v/t*100,0,100);
+  var b=document.getElementById("klBar"+id); if(b) b.style.width=pct+"%";
+  var x=document.getElementById("klVal"+id); if(x) x.textContent=(v||0)+" / "+(num(target)||0)+(unit?" "+unit:"");
+}
+function refreshBmi(){ var el=document.getElementById("klBmi"); var b=bmiVal(); if(el&&b){ el.textContent=b.toFixed(1); var c=el.parentElement&&el.parentElement.querySelector(".ash"); if(c) c.textContent=bmiCat(b); } }
+
+/* ============================ Events ============================ */
+function onInput(e){
+  var t=e.target;
+  if(t.hasAttribute("data-day")){ var day=ensureDay(selDate()); setPath(day, t.getAttribute("data-day"), t.value); save();
+    if(t.getAttribute("data-live")) refreshHealthLive(); return; }
+  if(t.hasAttribute("data-state")){ setPath(state, t.getAttribute("data-state"), t.value); save();
+    var lv=t.getAttribute("data-live"); if(lv==="bmi") refreshBmi(); if(state.ui.tab==="health") refreshHealthLive(); return; }
+}
+function onClick(e){
+  var b=e.target.closest("[data-action]"); if(!b) return;
+  var a=b.getAttribute("data-action"); var p=a.split(":");
+  switch(p[0]){
+    case "tab": state.ui.tab=p[1]; render({top:true}); return;
+    case "backtoday": state.ui.selectedDate=null; render({top:true}); return;
+    case "feel": { var d=ensureDay(selDate()); var cur=num(d.recovery.feel); d.recovery.feel = (cur===+p[1])?"":+p[1]; save(); render(); return; }
+    case "setdone": { var d2=ensureDay(selDate()); var arr=d2.log[p[1]]; var i=+p[2]; if(arr&&arr[i]){ arr[i].done=!arr[i].done; } recomputeSessionDone(selDate()); save(); render(); return; }
+    case "addset": { var d3=ensureDay(selDate()); var arr3=d3.log[p[1]]||(d3.log[p[1]]=[]); var last=lastLogFor(p[1],selDate()); var ls=last&&last.sets[arr3.length]; arr3.push({w:ls?ls.w:"",reps:ls?ls.reps:"",done:false}); save(); render(); return; }
+    case "rmset": { var d4=ensureDay(selDate()); var arr4=d4.log[p[1]]; if(arr4&&arr4.length>1) arr4.pop(); recomputeSessionDone(selDate()); save(); render(); return; }
+    case "marksession": { setSessionDone(selDate(), p[1]==="1"); save(); render(); return; }
+    case "goal": handleGoal(p[1]); save(); render(); return;
+    case "addgoal": { var inp=document.getElementById("klNewGoal"); var v=(inp&&inp.value||"").trim(); if(v){ ensureDay(selDate()).custom.push({id:String(Date.now()),label:v,done:false}); save(); render(); } return; }
+    case "delgoal": { var d5=ensureDay(selDate()); d5.custom=d5.custom.filter(function(c){return c.id!==p[1];}); save(); render(); return; }
+    case "split": chooseSplit(p[1]); save(); render(); return;
+    case "openday": state.ui.openDay = (state.ui.openDay===p[1]?null:p[1]); render(); return;
+    case "setday": state.config.days[p[1]]=p[2]; state.ui.openDay=null; save(); render(); return;
+    case "cat": state.ui.splitCat=p[1]; render(); return;
+    case "sets": { var lst=state.config.exercises[p[1]]; for(var k=0;k<lst.length;k++){ if(lst[k].id===p[2]){ lst[k].sets=clamp(lst[k].sets+(+p[3]),1,10); } } save(); render(); return; }
+    case "remex": state.config.exercises[p[1]]=state.config.exercises[p[1]].filter(function(e){return e.id!==p[2];}); save(); render(); return;
+    case "addex": state.config.exercises[p[1]].push({id:p[2],sets:3}); save(); render(); return;
+    case "addcustom": { var ci=document.getElementById("klCustomEx"); var name=(ci&&ci.value||"").trim(); if(name){ var id="cx"+Date.now(); state.customExercises[id]={name:name,reps:"8-12",cat:p[1]}; state.config.exercises[p[1]].push({id:id,sets:3}); save(); render(); } return; }
+    case "calprev": calShift(-1); render(); return;
+    case "calnext": calShift(1); render(); return;
+    case "calsel": state.ui.selectedDate=p[1]; render(); return;
+    case "opensel": state.ui.tab="today"; render({top:true}); return;
+    case "feelnone": return;
+    case "askreset": state.ui.confirmReset=true; render(); return;
+    case "cancelreset": state.ui.confirmReset=false; render(); return;
+    case "doreset": doReset(); return;
+    case "export": doExport(); return;
+  }
+}
+function recomputeSessionDone(ds){
+  var day=ensureDay(ds), type=sessionTypeFor(ds); if(type==="rest"){ day.sessionDone=false; return; }
+  var f=band(computeReadiness(day.recovery)).factor; if(f<=0){ day.sessionDone=false; return; }
+  var exs=state.config.exercises[type]||[]; var all=exs.length>0;
+  exs.forEach(function(e){ var n=adjSets(e.sets,f); var lg=day.log[e.id]||[]; for(var i=0;i<n;i++){ if(!(lg[i]&&lg[i].done)) all=false; } });
+  day.sessionDone=all;
+}
+function setSessionDone(ds, val){
+  var day=ensureDay(ds), type=sessionTypeFor(ds); if(type==="rest") return;
+  var f=band(computeReadiness(day.recovery)).factor; if(f<=0) return;
+  (state.config.exercises[type]||[]).forEach(function(e){ var n=adjSets(e.sets,f); var lg=day.log[e.id]||(day.log[e.id]=[]); for(var i=0;i<n;i++){ if(!lg[i]) lg[i]={w:"",reps:"",done:false}; lg[i].done=val; } });
+  day.sessionDone=val;
+}
+function handleGoal(id){
+  var day=ensureDay(selDate());
+  if(id==="__session"){ setSessionDone(selDate(), !day.sessionDone); return; }
+  if(id.indexOf("h_")===0){ var hid=id.slice(2); day.habits[hid]=!day.habits[hid]; return; }
+  if(id.indexOf("c_")===0){ var cid=id.slice(2); day.custom=day.custom.map(function(c){ return c.id===cid?Object.assign({},c,{done:!c.done}):c; }); }
+}
+function chooseSplit(key){ state.config.split=key; state.config.days=Object.assign({},SPLITS[key].days); }
+function calShift(d){ var c=state.ui.cal; var m=c.m+d, y=c.y; if(m<0){m=11;y--;} if(m>11){m=0;y++;} state.ui.cal={y:y,m:m}; }
+function doReset(){ state=defaultState(); try{ localStorage.removeItem(LS); }catch(e){} render({top:true}); }
+function doExport(){
+  try{
+    var data=JSON.stringify({profile:state.profile,config:state.config,customExercises:state.customExercises,days:state.days},null,2);
+    var blob=new Blob([data],{type:"application/json"});
+    var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="kernlast-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }catch(e){}
+}
+
+/* ============================ Init ============================ */
+function init(){
+  load();
+  var app=document.getElementById("app");
+  app.addEventListener("click", onClick);
+  app.addEventListener("input", onInput);
+  app.addEventListener("change", onInput);
+  render({top:true});
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", init); else init();
+
+})();
+</script>
+</body>
+</html>
